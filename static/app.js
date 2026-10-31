@@ -57,6 +57,14 @@ function bindProjectCardHover(){
   });
 }
 
+const DEFAULT_PROJECTS = [
+  { id: 1, title: 'Luxe Atelier', category: 'E-COMMERCE CONCEPT', type_badge: '01 / E-COMMERCE CONCEPT', visual_theme: 'project-fashion', link_url: '#contact', description: 'Luxury e-commerce experience built for high-end boutique brands.', is_active: 1 },
+  { id: 2, title: 'NovaTech Solutions', category: 'BUSINESS WEBSITE CONCEPT', type_badge: '02 / BUSINESS WEBSITE CONCEPT', visual_theme: 'project-tech', link_url: '#contact', description: 'Modern corporate platform engineered for tech and AI startups.', is_active: 1 },
+  { id: 3, title: 'Studio Forma', category: 'CREATIVE PORTFOLIO CONCEPT', type_badge: '03 / CREATIVE PORTFOLIO CONCEPT', visual_theme: 'project-artist', link_url: '#contact', description: 'Immersive design portfolio with motion aesthetics and editorial layouts.', is_active: 1 },
+  { id: 4, title: 'FitLife Platform', category: 'WELLNESS CONCEPT', type_badge: '04 / WELLNESS CONCEPT', visual_theme: 'project-wellness', link_url: '#contact', description: 'Mobile-first wellness app landing page and subscription portal.', is_active: 1 },
+  { id: 5, title: 'Northline Estates', category: 'REAL ESTATE CONCEPT', type_badge: '05 / REAL ESTATE CONCEPT', visual_theme: 'project-property', link_url: '#contact', description: 'High-impact real estate showcase with interactive floorplans.', is_active: 1 }
+];
+
 async function api(url,options={}){
   let res;
   try {
@@ -71,7 +79,8 @@ async function api(url,options={}){
       }
       if(url.includes('/api/projects')){
         const v = localStorage.getItem('zenvex_projects');
-        return v ? JSON.parse(v).filter(p=>p.is_active) : [];
+        const list = v ? JSON.parse(v) : DEFAULT_PROJECTS;
+        return list.filter(p=>p.is_active);
       }
       if(url.includes('/api/offers')){
         const v = localStorage.getItem('zenvex_offers');
@@ -359,24 +368,26 @@ function renderProjectVisual(p){
 async function loadProjects(){
   try{
     const projects = await api('/api/projects');
-    if(!projects || !projects.length) return;
-
-    if(track){
-      track.innerHTML = projects.map((p, idx) => `
-        <article class="project-card ${esc(p.visual_theme || 'project-tech')}" tabindex="0" onclick="window.location.href='${esc(p.link_url || '#contact')}'">
-          ${renderProjectVisual(p)}
-          <div class="project-meta">
-            <div>
-              <small>${esc(p.type_badge || p.category || (idx + 1) + ' / CONCEPT')}</small>
-              <h3>${esc(p.title)}</h3>
-            </div>
-            <span>↗</span>
-          </div>
-        </article>
-      `).join('');
-      
-      bindProjectCardHover();
+    if(!track) return;
+    if(!projects || !projects.length){
+      track.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);width:100%;font-size:14px;">No active portfolio projects currently available.</div>';
+      return;
     }
+
+    track.innerHTML = projects.map((p, idx) => `
+      <article class="project-card ${esc(p.visual_theme || 'project-tech')}" tabindex="0" onclick="window.location.href='${esc(p.link_url || '#contact')}'">
+        ${renderProjectVisual(p)}
+        <div class="project-meta">
+          <div>
+            <small>${esc(p.type_badge || p.category || (idx + 1) + ' / CONCEPT')}</small>
+            <h3>${esc(p.title)}</h3>
+          </div>
+          <span>↗</span>
+        </div>
+      </article>
+    `).join('');
+    
+    bindProjectCardHover();
   }catch(e){
     console.info('Projects load error', e);
   }

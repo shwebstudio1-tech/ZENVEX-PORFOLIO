@@ -296,6 +296,59 @@
     </div>
   </main>
 
+  <!-- EDIT PROJECT DIALOG -->
+  <dialog id="editProjectDialog" style="border:1px solid var(--line);border-radius:20px;padding:28px;max-width:600px;width:90%;box-shadow:0 15px 40px rgba(0,0,0,0.25);margin:auto;">
+    <form id="editProjectForm">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+        <h2 style="margin:0;font:700 20px Manrope;color:var(--ink);">✏️ Edit Portfolio Project</h2>
+        <button type="button" onclick="document.getElementById('editProjectDialog').close()" style="border:none;background:none;font-size:22px;cursor:pointer;">×</button>
+      </div>
+      <input type="hidden" name="id" id="editProjectId">
+      <div class="form-grid">
+        <label>Project Title
+          <input name="title" id="editProjectTitle" required>
+        </label>
+        <label>Category Name
+          <input name="category" id="editProjectCategory" required>
+        </label>
+      </div>
+      <div class="form-grid">
+        <label>Type Badge / Number Kicker
+          <input name="type_badge" id="editProjectTypeBadge">
+        </label>
+        <label>Visual Style Theme
+          <select name="visual_theme" id="editProjectVisualTheme">
+            <option value="project-fashion">Fashion / Luxury Style</option>
+            <option value="project-tech">Tech / Modern Corporate Style</option>
+            <option value="project-artist">Artist / Editorial Portfolio Style</option>
+            <option value="project-wellness">Wellness / Mobile App Style</option>
+            <option value="project-property">Real Estate / Architecture Style</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-grid">
+        <label>Project Link / CTA URL
+          <input name="link_url" id="editProjectLinkUrl">
+        </label>
+        <label>Thumbnail Image (URL or Upload)
+          <div style="display:flex;gap:10px;align-items:center;">
+            <input name="image_url" id="editProjectImageUrl" placeholder="Image URL..." style="flex:1;">
+            <input type="file" id="editImageFileInput" accept="image/*" style="display:none;">
+            <button type="button" class="btn btn-light" onclick="document.getElementById('editImageFileInput').click()" style="white-space:nowrap;padding:8px 12px;font-size:11px;">📁 Upload</button>
+          </div>
+        </label>
+      </div>
+      <label>Project Description
+        <textarea name="description" id="editProjectDescription" rows="3"></textarea>
+      </label>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button type="button" class="btn btn-light" onclick="document.getElementById('editProjectDialog').close()">Cancel</button>
+        <button type="submit" class="btn btn-dark">Save Changes ↗</button>
+      </div>
+      <p id="editProjectStatus" class="form-status" style="margin-top:10px;"></p>
+    </form>
+  </dialog>
+
   <script>
     function getAdminToken(){
       return localStorage.getItem('zenvex_admin_token') || '';
@@ -385,7 +438,9 @@
         let projects = getStaticData('projects', [
           { id: 1, title: 'Luxe Atelier', category: 'E-COMMERCE CONCEPT', type_badge: '01 / E-COMMERCE CONCEPT', visual_theme: 'project-fashion', link_url: '#contact', description: 'Luxury e-commerce experience built for high-end boutique brands.', is_active: 1 },
           { id: 2, title: 'NovaTech Solutions', category: 'BUSINESS WEBSITE CONCEPT', type_badge: '02 / BUSINESS WEBSITE CONCEPT', visual_theme: 'project-tech', link_url: '#contact', description: 'Modern corporate platform engineered for tech and AI startups.', is_active: 1 },
-          { id: 3, title: 'Studio Forma', category: 'CREATIVE PORTFOLIO CONCEPT', type_badge: '03 / CREATIVE PORTFOLIO CONCEPT', visual_theme: 'project-artist', link_url: '#contact', description: 'Immersive design portfolio with motion aesthetics and editorial layouts.', is_active: 1 }
+          { id: 3, title: 'Studio Forma', category: 'CREATIVE PORTFOLIO CONCEPT', type_badge: '03 / CREATIVE PORTFOLIO CONCEPT', visual_theme: 'project-artist', link_url: '#contact', description: 'Immersive design portfolio with motion aesthetics and editorial layouts.', is_active: 1 },
+          { id: 4, title: 'FitLife Platform', category: 'WELLNESS CONCEPT', type_badge: '04 / WELLNESS CONCEPT', visual_theme: 'project-wellness', link_url: '#contact', description: 'Mobile-first wellness app landing page and subscription portal.', is_active: 1 },
+          { id: 5, title: 'Northline Estates', category: 'REAL ESTATE CONCEPT', type_badge: '05 / REAL ESTATE CONCEPT', visual_theme: 'project-property', link_url: '#contact', description: 'High-impact real estate showcase with interactive floorplans.', is_active: 1 }
         ]);
 
         if (method === 'POST') {
@@ -397,6 +452,17 @@
               projects = projects.filter(p => p.id !== idParam);
             } else if (action === 'toggle') {
               projects = projects.map(p => p.id === idParam ? { ...p, is_active: p.is_active ? 0 : 1 } : p);
+            } else if (action === 'update') {
+              projects = projects.map(p => p.id === idParam ? {
+                ...p,
+                title: body.title !== undefined ? String(body.title) : p.title,
+                category: body.category !== undefined ? String(body.category) : p.category,
+                type_badge: body.type_badge !== undefined ? String(body.type_badge) : p.type_badge,
+                visual_theme: body.visual_theme !== undefined ? String(body.visual_theme) : p.visual_theme,
+                image_url: body.image_url !== undefined ? String(body.image_url) : p.image_url,
+                link_url: body.link_url !== undefined ? String(body.link_url) : p.link_url,
+                description: body.description !== undefined ? String(body.description) : p.description
+              } : p);
             }
             setStaticData('projects', projects);
             return { ok: true, message: 'Project action completed' };
@@ -506,6 +572,8 @@
       });
     });
 
+    let currentProjectsList = [];
+
     // Load Data Controller
     async function loadAll(){
       try {
@@ -516,6 +584,7 @@
           api('/api/admin/offers'),
           api('/api/site-settings')
         ]);
+        currentProjectsList = projects || [];
 
         // Summary Counts
         document.getElementById('countInquiries').textContent = messages.length || 0;
@@ -538,6 +607,7 @@
                 <small style="color:var(--muted)">Link: ${esc(p.link_url)} | Theme: ${esc(p.visual_theme)}${p.image_url ? ` | Image: Custom` : ''}</small>
               </div>
               <div class="admin-actions">
+                <button class="primary" onclick="openEditProjectModal(${p.id})">Edit ✏️</button>
                 <button onclick="toggleProject(${p.id})">${p.is_active ? 'Disable' : 'Enable'}</button>
                 <button class="danger" onclick="deleteProject(${p.id})">Delete</button>
               </div>
@@ -623,6 +693,21 @@
     }
 
     // Handlers
+    function openEditProjectModal(id) {
+      const p = currentProjectsList.find(item => item.id === id);
+      if (!p) return;
+      document.getElementById('editProjectId').value = p.id;
+      document.getElementById('editProjectTitle').value = p.title || '';
+      document.getElementById('editProjectCategory').value = p.category || '';
+      document.getElementById('editProjectTypeBadge').value = p.type_badge || '';
+      document.getElementById('editProjectVisualTheme').value = p.visual_theme || 'project-tech';
+      document.getElementById('editProjectLinkUrl').value = p.link_url || '#contact';
+      document.getElementById('editProjectImageUrl').value = p.image_url || '';
+      document.getElementById('editProjectDescription').value = p.description || '';
+      document.getElementById('editProjectStatus').textContent = '';
+      document.getElementById('editProjectDialog').showModal();
+    }
+
     async function toggleProject(id){
       try {
         await api('/api/admin/projects/' + id, { method:'POST', body: JSON.stringify({ action: 'toggle' }) });
@@ -689,6 +774,53 @@
         }
       };
       reader.readAsDataURL(file);
+    });
+
+    // Edit Image Upload Listener
+    document.getElementById('editImageFileInput').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+      const urlInput = document.getElementById('editProjectImageUrl');
+      const reader = new FileReader();
+      reader.onload = async function() {
+        try {
+          const dataUrl = reader.result;
+          const res = await api('/api/admin/upload-image', {
+            method: 'POST',
+            body: JSON.stringify({ dataUrl, filename: file.name })
+          });
+          urlInput.value = res.url;
+        } catch(err) {
+          alert('Upload failed: ' + err.message);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Edit Project Form Submit Listener
+    document.getElementById('editProjectForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('editProjectStatus');
+      status.style.color = 'var(--muted)';
+      status.textContent = 'Saving changes...';
+      try {
+        const pid = document.getElementById('editProjectId').value;
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData);
+        const res = await api('/api/admin/projects/' + pid, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'update', ...data })
+        });
+        status.style.color = '#1e7e34';
+        status.textContent = '✓ ' + (res.message || 'Project updated successfully!');
+        setTimeout(() => {
+          document.getElementById('editProjectDialog').close();
+        }, 500);
+        await loadAll();
+      } catch(err) {
+        status.style.color = '#d92550';
+        status.textContent = '❌ ' + err.message;
+      }
     });
 
     // Forms
