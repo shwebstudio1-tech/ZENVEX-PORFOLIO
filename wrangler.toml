@@ -1,0 +1,9 @@
+name = "zenvex-portfolio"
+compatibility_date = "2026-10-31"
+compatibility_flags = ["nodejs_compat"]
+
+[site]
+bucket = "./dist"
+
+[vars]
+NODE_ENV = "production"

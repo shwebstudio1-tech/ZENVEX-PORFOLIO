@@ -1,0 +1,6 @@
+{
+  "name": "ZENVEX — Digital Innovation Studio",
+  "description": "ZENVEX creates thoughtful websites and immersive digital experiences that help ambitious businesses grow beyond borders.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
