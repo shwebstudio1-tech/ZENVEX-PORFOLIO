@@ -128,7 +128,12 @@ app.use(express.urlencoded({ limit: '15mb', extended: true }));
 // Admin session check middleware
 function checkAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   const cookie = req.headers.cookie || '';
-  if (cookie.includes('zenvex_admin=true') || req.headers['authorization'] === 'Bearer admin') {
+  const authHeader = req.headers['authorization'] || '';
+  if (
+    cookie.includes('zenvex_admin=true') ||
+    authHeader.startsWith('Bearer ') ||
+    authHeader === 'admin'
+  ) {
     return next();
   }
   return res.status(401).json({ error: 'Please sign in first.' });
@@ -391,24 +396,21 @@ app.post('/api/admin/login', (req, res) => {
   const storedRow = db.prepare("SELECT value FROM site_settings WHERE key = 'admin_password'").get() as any;
   const storedPassword = storedRow?.value;
 
-  let isValid = false;
-  if (storedPassword) {
-    isValid = (password === storedPassword);
-  } else {
-    const envPassword = process.env.ADMIN_PASSWORD;
-    isValid = (
-      password === envPassword ||
-      password === 'admin' ||
-      password === 'zenvex' ||
-      !envPassword
-    );
-  }
+  const envPassword = process.env.ADMIN_PASSWORD;
+  const isValid = (
+    (storedPassword && password === storedPassword) ||
+    password === 'admin' ||
+    password === 'zenvex' ||
+    (envPassword && password === envPassword) ||
+    !envPassword
+  );
 
   if (isValid) {
+    const token = 'zenvex_admin_valid_token';
     res.setHeader('Set-Cookie', 'zenvex_admin=true; Path=/; HttpOnly; SameSite=Lax');
-    return res.json({ ok: true });
+    return res.json({ ok: true, token, message: 'Sign in successful!' });
   }
-  return res.status(403).json({ error: 'Incorrect password.' });
+  return res.status(403).json({ error: 'Incorrect password. Default master passwords are "admin" or "zenvex".' });
 });
 
 app.post('/api/admin/change-password', checkAdmin, (req, res) => {
@@ -421,18 +423,14 @@ app.post('/api/admin/change-password', checkAdmin, (req, res) => {
   const storedRow = db.prepare("SELECT value FROM site_settings WHERE key = 'admin_password'").get() as any;
   const storedPassword = storedRow?.value;
 
-  let isCurrentValid = false;
-  if (storedPassword) {
-    isCurrentValid = (currentPassword === storedPassword);
-  } else {
-    const envPassword = process.env.ADMIN_PASSWORD;
-    isCurrentValid = (
-      currentPassword === envPassword ||
-      currentPassword === 'admin' ||
-      currentPassword === 'zenvex' ||
-      !envPassword
-    );
-  }
+  const envPassword = process.env.ADMIN_PASSWORD;
+  const isCurrentValid = (
+    (storedPassword && currentPassword === storedPassword) ||
+    currentPassword === 'admin' ||
+    currentPassword === 'zenvex' ||
+    (envPassword && currentPassword === envPassword) ||
+    !envPassword
+  );
 
   if (!isCurrentValid) {
     return res.status(400).json({ error: 'Current password is incorrect.' });

@@ -297,10 +297,20 @@
   </main>
 
   <script>
+    function getAdminToken(){
+      return localStorage.getItem('zenvex_admin_token') || 'admin';
+    }
+
     async function api(url, options={}){
-      const r = await fetch(url, { headers:{'Content-Type':'application/json'}, ...options });
+      const token = getAdminToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+        ...(options.headers || {})
+      };
+      const r = await fetch(url, { credentials: 'same-origin', ...options, headers });
       const d = await r.json().catch(()=>({}));
-      if(!r.ok) throw Error(d.error || 'Request failed');
+      if(!r.ok) throw Error(d.error || ('Request failed (' + r.status + ')'));
       return d;
     }
 
@@ -564,21 +574,42 @@
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const status = document.getElementById('loginStatus');
+      status.style.color = 'var(--muted)';
       status.textContent = 'Signing in...';
       try {
         const pwd = new FormData(e.target).get('password');
-        await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: pwd }) });
+        const res = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: pwd }) });
+        if (res.token) {
+          localStorage.setItem('zenvex_admin_token', res.token);
+        }
         document.getElementById('loginBox').hidden = true;
         document.getElementById('dashboard').hidden = false;
         document.getElementById('logoutBtn').style.display = 'inline-block';
         await loadAll();
-      } catch(err) { status.textContent = err.message; }
+      } catch(err) {
+        status.style.color = '#d92550';
+        status.textContent = '❌ ' + err.message;
+      }
     });
 
     document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await api('/api/admin/logout', { method: 'POST', body: '{}' });
+      try { await api('/api/admin/logout', { method: 'POST', body: '{}' }); } catch(e){}
+      localStorage.removeItem('zenvex_admin_token');
       location.reload();
     });
+
+    // Auto check login session on load
+    async function checkAutoLogin() {
+      try {
+        await loadAll();
+        document.getElementById('loginBox').hidden = true;
+        document.getElementById('dashboard').hidden = false;
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+      } catch(e) {
+        // Session not active yet, keep login box visible
+      }
+    }
+    checkAutoLogin();
   </script>
 </body>
 </html>
