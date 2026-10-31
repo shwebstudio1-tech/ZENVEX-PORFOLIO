@@ -388,17 +388,66 @@ app.post('/api/contact', (req, res) => {
 
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body || {};
-  const expectedPassword = process.env.ADMIN_PASSWORD || 'change-me-now';
-  if (
-    password === expectedPassword ||
-    password === 'admin' ||
-    password === 'zenvex' ||
-    expectedPassword === 'change-me-now'
-  ) {
+  const storedRow = db.prepare("SELECT value FROM site_settings WHERE key = 'admin_password'").get() as any;
+  const storedPassword = storedRow?.value;
+
+  let isValid = false;
+  if (storedPassword) {
+    isValid = (password === storedPassword);
+  } else {
+    const envPassword = process.env.ADMIN_PASSWORD;
+    isValid = (
+      password === envPassword ||
+      password === 'admin' ||
+      password === 'zenvex' ||
+      !envPassword
+    );
+  }
+
+  if (isValid) {
     res.setHeader('Set-Cookie', 'zenvex_admin=true; Path=/; HttpOnly; SameSite=Lax');
     return res.json({ ok: true });
   }
-  return res.status(403).json({ error: 'Incorrect password. Try "admin" or set ADMIN_PASSWORD.' });
+  return res.status(403).json({ error: 'Incorrect password.' });
+});
+
+app.post('/api/admin/change-password', checkAdmin, (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 4) {
+    return res.status(400).json({ error: 'New password must be at least 4 characters long.' });
+  }
+
+  const storedRow = db.prepare("SELECT value FROM site_settings WHERE key = 'admin_password'").get() as any;
+  const storedPassword = storedRow?.value;
+
+  let isCurrentValid = false;
+  if (storedPassword) {
+    isCurrentValid = (currentPassword === storedPassword);
+  } else {
+    const envPassword = process.env.ADMIN_PASSWORD;
+    isCurrentValid = (
+      currentPassword === envPassword ||
+      currentPassword === 'admin' ||
+      currentPassword === 'zenvex' ||
+      !envPassword
+    );
+  }
+
+  if (!isCurrentValid) {
+    return res.status(400).json({ error: 'Current password is incorrect.' });
+  }
+
+  try {
+    const upsert = db.prepare(`
+      INSERT INTO site_settings (key, value) VALUES ('admin_password', ?)
+      ON CONFLICT(key) DO UPDATE SET value=excluded.value
+    `);
+    upsert.run(newPassword.trim());
+    return res.json({ ok: true, message: 'Admin password updated successfully!' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update admin password.' });
+  }
 });
 
 app.post('/api/admin/logout', checkAdmin, (req, res) => {
@@ -524,7 +573,7 @@ app.get('/google:code.html', (req, res) => {
 });
 
 // HTML Pages
-app.get('/admin', (_req, res) => {
+app.get(['/admin', '/admin.html'], (_req, res) => {
   return res.sendFile(path.join(process.cwd(), 'admin.html'));
 });
 
