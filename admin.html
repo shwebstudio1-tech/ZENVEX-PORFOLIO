@@ -318,26 +318,34 @@
 
       // 1. LOGIN
       if (url.includes('/api/admin/login')) {
-        const storedPwd = localStorage.getItem('zenvex_admin_password') || 'admin';
+        const storedPwd = localStorage.getItem('zenvex_admin_password');
         const inputPwd = String(body.password || '').trim();
-        if (inputPwd === storedPwd || inputPwd === 'admin' || inputPwd === 'zenvex') {
+        if (storedPwd) {
+          if (inputPwd === storedPwd) {
+            const token = 'zenvex_admin_valid_token';
+            localStorage.setItem('zenvex_admin_token', token);
+            return { ok: true, token, message: 'Sign in successful!' };
+          }
+        } else {
+          // Set first login password as stored admin password
+          localStorage.setItem('zenvex_admin_password', inputPwd);
           const token = 'zenvex_admin_valid_token';
           localStorage.setItem('zenvex_admin_token', token);
           return { ok: true, token, message: 'Sign in successful!' };
         }
-        throw new Error('Incorrect password. Default master passwords are "admin" or "zenvex".');
+        throw new Error('Incorrect password.');
       }
 
       // 2. CHANGE PASSWORD
       if (url.includes('/api/admin/change-password') || url.includes('/api/admin/password')) {
-        const storedPwd = localStorage.getItem('zenvex_admin_password') || 'admin';
+        const storedPwd = localStorage.getItem('zenvex_admin_password');
         const currentPwd = String(body.currentPassword || '').trim();
         const newPwd = String(body.newPassword || body.password || '').trim();
 
         if (!newPwd || newPwd.length < 4) {
           throw new Error('New password must be at least 4 characters long.');
         }
-        if (currentPwd !== storedPwd && currentPwd !== 'admin' && currentPwd !== 'zenvex') {
+        if (storedPwd && currentPwd !== storedPwd) {
           throw new Error('Current password is incorrect.');
         }
         localStorage.setItem('zenvex_admin_password', newPwd);

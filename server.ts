@@ -401,22 +401,29 @@ app.post('/api/admin/login', (req, res) => {
   const { password } = req.body || {};
   const storedRow = db.prepare("SELECT value FROM site_settings WHERE key = 'admin_password'").get() as any;
   const storedPassword = storedRow?.value;
-
   const envPassword = process.env.ADMIN_PASSWORD;
-  const isValid = (
-    (storedPassword && password === storedPassword) ||
-    password === 'admin' ||
-    password === 'zenvex' ||
-    (envPassword && password === envPassword) ||
-    !envPassword
-  );
+
+  let isValid = false;
+  if (storedPassword) {
+    isValid = (password === storedPassword);
+  } else if (envPassword) {
+    isValid = (password === envPassword);
+  } else {
+    // Set first login password as the admin password if none configured
+    const upsert = db.prepare(`
+      INSERT INTO site_settings (key, value) VALUES ('admin_password', ?)
+      ON CONFLICT(key) DO UPDATE SET value=excluded.value
+    `);
+    upsert.run(String(password || '').trim());
+    isValid = true;
+  }
 
   if (isValid) {
     const token = 'zenvex_admin_valid_token';
     res.setHeader('Set-Cookie', 'zenvex_admin=true; Path=/; HttpOnly; SameSite=Lax');
     return res.json({ ok: true, token, message: 'Sign in successful!' });
   }
-  return res.status(403).json({ error: 'Incorrect password. Default master passwords are "admin" or "zenvex".' });
+  return res.status(403).json({ error: 'Incorrect password.' });
 });
 
 const handlePasswordChange = (req: express.Request, res: express.Response) => {
@@ -430,17 +437,10 @@ const handlePasswordChange = (req: express.Request, res: express.Response) => {
 
   const storedRow = db.prepare("SELECT value FROM site_settings WHERE key = 'admin_password'").get() as any;
   const storedPassword = storedRow?.value;
-
   const envPassword = process.env.ADMIN_PASSWORD;
-  const isCurrentValid = (
-    (storedPassword && currentPwd === storedPassword) ||
-    currentPwd === 'admin' ||
-    currentPwd === 'zenvex' ||
-    (envPassword && currentPwd === envPassword) ||
-    !envPassword
-  );
 
-  if (!isCurrentValid) {
+  const expectedPassword = storedPassword || envPassword;
+  if (expectedPassword && currentPwd !== expectedPassword) {
     return res.status(400).json({ error: 'Current password is incorrect.' });
   }
 
