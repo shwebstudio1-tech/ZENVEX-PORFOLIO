@@ -129,10 +129,11 @@ app.use(express.urlencoded({ limit: '15mb', extended: true }));
 function checkAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   const cookie = req.headers.cookie || '';
   const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
   if (
     cookie.includes('zenvex_admin=true') ||
-    authHeader.startsWith('Bearer ') ||
-    authHeader === 'admin'
+    (token && token === 'zenvex_admin_valid_token')
   ) {
     return next();
   }
@@ -413,10 +414,12 @@ app.post('/api/admin/login', (req, res) => {
   return res.status(403).json({ error: 'Incorrect password. Default master passwords are "admin" or "zenvex".' });
 });
 
-app.post('/api/admin/change-password', checkAdmin, (req, res) => {
-  const { currentPassword, newPassword } = req.body || {};
+const handlePasswordChange = (req: express.Request, res: express.Response) => {
+  const { currentPassword, newPassword, password } = req.body || {};
+  const newPwd = String(newPassword || password || '').trim();
+  const currentPwd = String(currentPassword || '').trim();
 
-  if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 4) {
+  if (!newPwd || newPwd.length < 4) {
     return res.status(400).json({ error: 'New password must be at least 4 characters long.' });
   }
 
@@ -425,10 +428,10 @@ app.post('/api/admin/change-password', checkAdmin, (req, res) => {
 
   const envPassword = process.env.ADMIN_PASSWORD;
   const isCurrentValid = (
-    (storedPassword && currentPassword === storedPassword) ||
-    currentPassword === 'admin' ||
-    currentPassword === 'zenvex' ||
-    (envPassword && currentPassword === envPassword) ||
+    (storedPassword && currentPwd === storedPassword) ||
+    currentPwd === 'admin' ||
+    currentPwd === 'zenvex' ||
+    (envPassword && currentPwd === envPassword) ||
     !envPassword
   );
 
@@ -441,12 +444,16 @@ app.post('/api/admin/change-password', checkAdmin, (req, res) => {
       INSERT INTO site_settings (key, value) VALUES ('admin_password', ?)
       ON CONFLICT(key) DO UPDATE SET value=excluded.value
     `);
-    upsert.run(newPassword.trim());
+    upsert.run(newPwd);
     return res.json({ ok: true, message: 'Admin password updated successfully!' });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to update admin password.' });
   }
-});
+};
+
+app.post('/api/admin/change-password', checkAdmin, handlePasswordChange);
+app.post('/api/admin/password', checkAdmin, handlePasswordChange);
+app.put('/api/admin/password', checkAdmin, handlePasswordChange);
 
 app.post('/api/admin/logout', checkAdmin, (req, res) => {
   res.setHeader('Set-Cookie', 'zenvex_admin=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
