@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Portfolio Project",
+      "description": "ZENVEX portfolio or concept project",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "type_badge": { "type": "string" },
+        "visual_theme": { "type": "string" },
+        "image_url": { "type": "string" },
+        "link_url": { "type": "string" },
+        "description": { "type": "string" },
+        "is_active": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["title"]
+    },
+    "Offer": {
+      "title": "Promotional Offer",
+      "description": "Special launch or promotional offer",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "highlight_badge": { "type": "string" },
+        "description": { "type": "string" },
+        "discount_tag": { "type": "string" },
+        "cta_text": { "type": "string" },
+        "cta_link": { "type": "string" },
+        "is_active": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["title", "description"]
+    },
+    "SiteSetting": {
+      "title": "Website Setting",
+      "description": "Global website configuration setting",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" },
+        "value": { "type": "string" }
+      },
+      "required": ["key", "value"]
+    },
+    "Review": {
+      "title": "Client Review",
+      "description": "User review submitted for ZENVEX",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "company": { "type": "string" },
+        "rating": { "type": "number" },
+        "message": { "type": "string" },
+        "approved": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["name", "rating", "message"]
+    },
+    "Message": {
+      "title": "Contact Inquiry",
+      "description": "Project inquiry submitted via contact form",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "project_type": { "type": "string" },
+        "details": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["name", "email", "details"]
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Stores ZENVEX portfolio projects"
+    },
+    "/offers/{offerId}": {
+      "schema": "Offer",
+      "description": "Stores promotional offers"
+    },
+    "/site_settings/{settingId}": {
+      "schema": "SiteSetting",
+      "description": "Stores site settings"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Stores client reviews"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Stores contact inquiries"
+    }
+  }
+}

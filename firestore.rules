@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Projects collection
+    match /projects/{projectId} {
+      allow read, write: if true;
+    }
+    
+    // Offers collection
+    match /offers/{offerId} {
+      allow read, write: if true;
+    }
+    
+    // Site settings collection
+    match /site_settings/{settingId} {
+      allow read, write: if true;
+    }
+    
+    // Reviews collection
+    match /reviews/{reviewId} {
+      allow read, write: if true;
+    }
+    
+    // Messages (inquiries) collection
+    match /messages/{messageId} {
+      allow read, write: if true;
+    }
+  }
+}
