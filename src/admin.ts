@@ -38,7 +38,9 @@ document.querySelectorAll('.admin-tab').forEach(tabBtn => {
 
 // Load All Dashboard Data from Firebase Firestore
 async function loadAll() {
+  const projEl = document.getElementById('projectsList');
   try {
+    console.log('Loading all dashboard data...');
     const [reviews, messages, projects, offers, settings] = await Promise.all([
       fetchReviews(false),
       fetchMessages(),
@@ -48,19 +50,20 @@ async function loadAll() {
     ]);
 
     currentProjectsList = projects || [];
+    console.log('Dashboard data loaded successfully.');
 
     // Summary Counts
     const countInquiries = document.getElementById('countInquiries');
     if (countInquiries) countInquiries.textContent = (messages.length || 0).toString();
 
     const countReviews = document.getElementById('countReviews');
-    if (countReviews) countReviews.textContent = (reviews.filter(r => !r.approved).length || 0).toString();
+    if (countReviews) countReviews.textContent = (reviews.filter((r: any) => !r.approved).length || 0).toString();
 
     const countProjects = document.getElementById('countProjects');
-    if (countProjects) countProjects.textContent = (projects.filter(p => p.is_active).length || 0).toString();
+    if (countProjects) countProjects.textContent = (projects.filter((p: any) => p.is_active).length || 0).toString();
 
     const countOffers = document.getElementById('countOffers');
-    if (countOffers) countOffers.textContent = (offers.filter(o => o.is_active).length || 0).toString();
+    if (countOffers) countOffers.textContent = (offers.filter((o: any) => o.is_active).length || 0).toString();
 
     // Render Projects
     const projEl = document.getElementById('projectsList');
@@ -226,8 +229,14 @@ async function loadAll() {
       }
     }
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to load dashboard data:', err);
+    if (projEl) {
+      projEl.innerHTML = `<div style="padding:20px;background:#fff5f5;border:1px solid #feb2b2;color:#c53030;border-radius:10px;">
+        <b>⚠️ Loading Error:</b> ${err.message || 'Firestore connection failed.'}
+        <br><small>Please check your internet connection or Firebase setup.</small>
+      </div>`;
+    }
   }
 }
 

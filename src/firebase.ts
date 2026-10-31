@@ -24,6 +24,7 @@ const app = initializeApp({
   messagingSenderId: config.messagingSenderId,
   appId: config.appId
 });
+console.log('ZENVEX Firebase Module Loaded [Production Cloud Sync]');
 
 export const db = config.firestoreDatabaseId && config.firestoreDatabaseId !== '(default)'
   ? getFirestore(app, config.firestoreDatabaseId)
@@ -120,57 +121,77 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   google_site_verification: '7Bb508Ueg0kMwvSTHErobneh4h-zFmBYaZOpcIrGsss'
 };
 
+let seedingPromise: Promise<void> | null = null;
+
 // Seed database on startup if empty
 export async function seedFirestoreIfEmpty() {
-  try {
-    const projCol = collection(db, 'projects');
-    const projSnap = await getDocs(projCol);
-    if (projSnap.empty) {
+  if (seedingPromise) return seedingPromise;
+  
+  seedingPromise = (async () => {
+    try {
+      console.log('Checking if Firestore needs seeding...');
+      const seededDoc = doc(db, 'site_settings', '_is_seeded');
+      const seededSnap = await getDoc(seededDoc);
+      
+      if (seededSnap.exists() && seededSnap.data().value === 'true') {
+        console.log('Firestore already seeded.');
+        return;
+      }
+
+      console.log('Seeding Firestore defaults...');
+      // Seed Projects
       for (const p of DEFAULT_PROJECTS) {
         await setDoc(doc(db, 'projects', p.id), p);
       }
-    }
 
-    const offerCol = collection(db, 'offers');
-    const offerSnap = await getDocs(offerCol);
-    if (offerSnap.empty) {
+      // Seed Offers
       for (const o of DEFAULT_OFFERS) {
         await setDoc(doc(db, 'offers', o.id), o);
       }
-    }
 
-    const setCol = collection(db, 'site_settings');
-    const setSnap = await getDocs(setCol);
-    if (setSnap.empty) {
+      // Seed Settings
       for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
         await setDoc(doc(db, 'site_settings', key), { key, value });
       }
+
+      // Mark as seeded
+      await setDoc(seededDoc, { key: '_is_seeded', value: 'true' });
+      console.log('Firestore seeded successfully.');
+    } catch (err) {
+      console.error('Firestore seeding failed:', err);
     }
-  } catch (err) {
-    console.error('Firestore seeding check error:', err);
-  }
+  })();
+  
+  return seedingPromise;
 }
 
 // ---------------- PROJECTS ----------------
 export async function fetchProjects(onlyActive = true) {
-  await seedFirestoreIfEmpty();
-  const projCol = collection(db, 'projects');
-  const snap = await getDocs(projCol);
-  const items: any[] = [];
-  snap.forEach(d => {
-    items.push({ id: d.id, ...d.data() });
-  });
+  try {
+    await seedFirestoreIfEmpty();
+    console.log('Fetching projects from Firestore...');
+    const projCol = collection(db, 'projects');
+    const snap = await getDocs(projCol);
+    const items: any[] = [];
+    snap.forEach(d => {
+      items.push({ id: d.id, ...d.data() });
+    });
+    console.log(`Fetched ${items.length} projects.`);
 
-  // Sort by id / created_at descending
-  items.sort((a, b) => {
-    if (a.created_at && b.created_at) return b.created_at.localeCompare(a.created_at);
-    return Number(b.id) - Number(a.id);
-  });
+    // Sort by id / created_at descending
+    items.sort((a, b) => {
+      if (a.created_at && b.created_at) return b.created_at.localeCompare(a.created_at);
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
 
-  if (onlyActive) {
-    return items.filter(i => i.is_active === true || i.is_active === 1);
+    if (onlyActive) {
+      return items.filter(i => i.is_active === true || i.is_active === 1);
+    }
+    return items;
+  } catch (err) {
+    console.error('Error fetching projects:', err);
+    throw err;
   }
-  return items;
 }
 
 export async function addProject(data: any) {
