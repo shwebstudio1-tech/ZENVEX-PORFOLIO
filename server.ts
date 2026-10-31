@@ -117,7 +117,12 @@ try {
     insertSetting.run('phone_number', '+92 371 0870570');
     insertSetting.run('email_address', 'profassersab57@gmail.com');
     insertSetting.run('whatsapp_link', 'https://wa.me/923710870570?text=Hi%20ZENVEX%2C%20I%27d%20like%20to%20discuss%20a%20project.');
+    insertSetting.run('google_site_verification', '7Bb508Ueg0kMwvSTHErobneh4h-zFmBYaZOpcIrGsss');
   }
+  db.prepare(`
+    INSERT INTO site_settings (key, value) VALUES ('google_site_verification', '7Bb508Ueg0kMwvSTHErobneh4h-zFmBYaZOpcIrGsss')
+    ON CONFLICT(key) DO UPDATE SET value='7Bb508Ueg0kMwvSTHErobneh4h-zFmBYaZOpcIrGsss'
+  `).run();
 } catch (e) {
   console.warn('Seeding failed:', e);
 }
