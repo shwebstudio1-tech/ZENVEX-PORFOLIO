@@ -58,10 +58,35 @@ function bindProjectCardHover(){
 }
 
 async function api(url,options={}){
-  const res=await fetch(url,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});
+  let res;
+  try {
+    res=await fetch(url,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});
+  } catch(e) {}
+
+  if(!res || res.status===404 || res.status===502){
+    try {
+      if(url.includes('/api/site-settings')){
+        const v = localStorage.getItem('zenvex_settings');
+        return v ? JSON.parse(v) : null;
+      }
+      if(url.includes('/api/projects')){
+        const v = localStorage.getItem('zenvex_projects');
+        return v ? JSON.parse(v).filter(p=>p.is_active) : [];
+      }
+      if(url.includes('/api/offers')){
+        const v = localStorage.getItem('zenvex_offers');
+        return v ? JSON.parse(v).filter(o=>o.is_active) : [];
+      }
+      if(url.includes('/api/reviews')){
+        const v = localStorage.getItem('zenvex_reviews');
+        return v ? JSON.parse(v) : [];
+      }
+    } catch(e) {}
+  }
+
   let data={};
   try{data=await res.json();}catch{}
-  if(!res.ok)throw new Error(data.error||'Something went wrong. Please try again.');
+  if(!res || !res.ok)throw new Error(data.error||'Something went wrong. Please try again.');
   return data;
 }
 

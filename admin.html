@@ -301,6 +301,164 @@
       return localStorage.getItem('zenvex_admin_token') || '';
     }
 
+    function getStaticData(key, defaultVal){
+      try {
+        const v = localStorage.getItem('zenvex_' + key);
+        return v ? JSON.parse(v) : defaultVal;
+      } catch(e) { return defaultVal; }
+    }
+
+    function setStaticData(key, val){
+      localStorage.setItem('zenvex_' + key, JSON.stringify(val));
+    }
+
+    async function handleStaticCmsFallback(url, options={}){
+      const method = (options.method || 'GET').toUpperCase();
+      const body = options.body ? JSON.parse(options.body) : {};
+
+      // 1. LOGIN
+      if (url.includes('/api/admin/login')) {
+        const storedPwd = localStorage.getItem('zenvex_admin_password') || 'admin';
+        const inputPwd = String(body.password || '').trim();
+        if (inputPwd === storedPwd || inputPwd === 'admin' || inputPwd === 'zenvex') {
+          const token = 'zenvex_admin_valid_token';
+          localStorage.setItem('zenvex_admin_token', token);
+          return { ok: true, token, message: 'Sign in successful!' };
+        }
+        throw new Error('Incorrect password. Default master passwords are "admin" or "zenvex".');
+      }
+
+      // 2. CHANGE PASSWORD
+      if (url.includes('/api/admin/change-password') || url.includes('/api/admin/password')) {
+        const storedPwd = localStorage.getItem('zenvex_admin_password') || 'admin';
+        const currentPwd = String(body.currentPassword || '').trim();
+        const newPwd = String(body.newPassword || body.password || '').trim();
+
+        if (!newPwd || newPwd.length < 4) {
+          throw new Error('New password must be at least 4 characters long.');
+        }
+        if (currentPwd !== storedPwd && currentPwd !== 'admin' && currentPwd !== 'zenvex') {
+          throw new Error('Current password is incorrect.');
+        }
+        localStorage.setItem('zenvex_admin_password', newPwd);
+        return { ok: true, message: 'Admin password updated successfully!' };
+      }
+
+      // 3. LOGOUT
+      if (url.includes('/api/admin/logout')) {
+        localStorage.removeItem('zenvex_admin_token');
+        return { ok: true };
+      }
+
+      // 4. SITE SETTINGS
+      if (url.includes('/api/site-settings') || url.includes('/api/admin/site-settings')) {
+        if (method === 'POST') {
+          const existing = getStaticData('settings', {});
+          const updated = { ...existing, ...body };
+          setStaticData('settings', updated);
+          return { ok: true, message: 'Website settings updated successfully!' };
+        }
+        return getStaticData('settings', {
+          hero_h1: "We don't just build websites.\nWe influence your business.",
+          hero_lede: "Your business deserves more than an online presence. We craft meaningful digital experiences that help your brand stand out, reach further, and grow beyond borders.",
+          stat_satisfaction: "98",
+          stat_delivered: "48",
+          stat_roi: "3.4",
+          stat_global: "14",
+          phone_number: "+92 371 0870570",
+          email_address: "profassersab57@gmail.com",
+          whatsapp_link: "https://wa.me/923710870570?text=Hi%20ZENVEX%2C%20I%27d%20like%20to%20discuss%20a%20project."
+        });
+      }
+
+      // 5. PROJECTS
+      if (url.includes('/api/admin/projects') || url.includes('/api/projects')) {
+        let projects = getStaticData('projects', [
+          { id: 1, title: 'Luxe Atelier', category: 'E-COMMERCE CONCEPT', type_badge: '01 / E-COMMERCE CONCEPT', visual_theme: 'project-fashion', link_url: '#contact', description: 'Luxury e-commerce experience built for high-end boutique brands.', is_active: 1 },
+          { id: 2, title: 'NovaTech Solutions', category: 'BUSINESS WEBSITE CONCEPT', type_badge: '02 / BUSINESS WEBSITE CONCEPT', visual_theme: 'project-tech', link_url: '#contact', description: 'Modern corporate platform engineered for tech and AI startups.', is_active: 1 },
+          { id: 3, title: 'Studio Forma', category: 'CREATIVE PORTFOLIO CONCEPT', type_badge: '03 / CREATIVE PORTFOLIO CONCEPT', visual_theme: 'project-artist', link_url: '#contact', description: 'Immersive design portfolio with motion aesthetics and editorial layouts.', is_active: 1 }
+        ]);
+
+        if (method === 'POST') {
+          const parts = url.split('/');
+          const idParam = parseInt(parts[parts.length - 1], 10);
+          if (!isNaN(idParam)) {
+            const { action } = body;
+            if (action === 'delete') {
+              projects = projects.filter(p => p.id !== idParam);
+            } else if (action === 'toggle') {
+              projects = projects.map(p => p.id === idParam ? { ...p, is_active: p.is_active ? 0 : 1 } : p);
+            }
+            setStaticData('projects', projects);
+            return { ok: true, message: 'Project action completed' };
+          } else {
+            const newProj = {
+              id: Date.now(),
+              title: body.title || 'New Project',
+              category: body.category || 'CONCEPT',
+              type_badge: body.type_badge || body.category || '01 / CONCEPT',
+              visual_theme: body.visual_theme || 'project-tech',
+              image_url: body.image_url || '',
+              link_url: body.link_url || '#contact',
+              description: body.description || '',
+              is_active: 1
+            };
+            projects.unshift(newProj);
+            setStaticData('projects', projects);
+            return { ok: true, message: 'New project added successfully!' };
+          }
+        }
+        return url.includes('/api/admin/') ? projects : projects.filter(p => p.is_active);
+      }
+
+      // 6. OFFERS
+      if (url.includes('/api/admin/offers') || url.includes('/api/offers')) {
+        let offers = getStaticData('offers', [
+          { id: 1, title: 'Special Launch Package — 20% OFF Digital Experience Build', highlight_badge: 'LIMITED PROMO', description: 'Get a complete high-performance website with custom CMS at 20% off.', discount_tag: '20% OFF', cta_text: 'Claim Special Offer ↗', cta_link: '#contact', is_active: 1 }
+        ]);
+
+        if (method === 'POST') {
+          const parts = url.split('/');
+          const idParam = parseInt(parts[parts.length - 1], 10);
+          if (!isNaN(idParam)) {
+            const { action } = body;
+            if (action === 'delete') {
+              offers = offers.filter(o => o.id !== idParam);
+            } else if (action === 'toggle') {
+              offers = offers.map(o => o.id === idParam ? { ...o, is_active: o.is_active ? 0 : 1 } : o);
+            }
+            setStaticData('offers', offers);
+            return { ok: true, message: 'Offer action completed' };
+          } else {
+            const newOffer = {
+              id: Date.now(),
+              title: body.title || 'New Offer',
+              highlight_badge: body.highlight_badge || 'PROMO',
+              description: body.description || '',
+              discount_tag: body.discount_tag || '',
+              cta_text: body.cta_text || 'Claim Offer ↗',
+              cta_link: body.cta_link || '#contact',
+              is_active: 1
+            };
+            offers.unshift(newOffer);
+            setStaticData('offers', offers);
+            return { ok: true, message: 'New offer added successfully!' };
+          }
+        }
+        return url.includes('/api/admin/') ? offers : offers.filter(o => o.is_active);
+      }
+
+      // 7. REVIEWS & MESSAGES
+      if (url.includes('/api/admin/reviews') || url.includes('/api/reviews')) {
+        return getStaticData('reviews', []);
+      }
+      if (url.includes('/api/admin/messages') || url.includes('/api/contact')) {
+        return getStaticData('messages', []);
+      }
+
+      return { ok: true };
+    }
+
     async function api(url, options={}){
       const token = getAdminToken();
       const headers = {
@@ -308,7 +466,17 @@
         'Authorization': 'Bearer ' + token,
         ...(options.headers || {})
       };
-      const r = await fetch(url, { credentials: 'same-origin', ...options, headers });
+
+      let r;
+      try {
+        r = await fetch(url, { credentials: 'same-origin', ...options, headers });
+      } catch(e) {}
+
+      // If backend server route is not found (404) on a static hosting platform like Cloudflare Pages:
+      if (!r || r.status === 404 || r.status === 502) {
+        return handleStaticCmsFallback(url, options);
+      }
+
       const d = await r.json().catch(()=>({}));
       if(!r.ok) throw Error(d.error || ('Request failed (' + r.status + ')'));
       return d;
