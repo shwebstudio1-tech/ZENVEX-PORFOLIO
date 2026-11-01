@@ -12,7 +12,8 @@ import {
   saveSiteSettings,
   fetchReviews,
   reviewAction,
-  fetchMessages
+  fetchMessages,
+  uploadImageToFirebase
 } from './firebase';
 
 function esc(s: any): string {
@@ -23,20 +24,6 @@ function esc(s: any): string {
 
 let currentProjectsList: any[] = [];
 
-// API Helper for Backend Routes (Image Uploads)
-async function api(url: string, options: any = {}) {
-  const token = localStorage.getItem('zenvex_admin_token') || '';
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer ' + token,
-    ...(options.headers || {})
-  };
-
-  const r = await fetch(url, { credentials: 'same-origin', ...options, headers });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw Error(d.error || ('Request failed (' + r.status + ')'));
-  return d;
-}
 
 // Tab Navigation
 document.querySelectorAll('.admin-tab').forEach(tabBtn => {
@@ -69,13 +56,12 @@ if (imageFileInput) {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const dataUrl = reader.result;
-        const res = await api('/api/admin/upload-image', {
-          method: 'POST',
-          body: JSON.stringify({ dataUrl, filename: file.name })
-        });
-        if (urlInput) urlInput.value = res.url;
-        if (previewImg) previewImg.src = res.url;
+        const dataUrl = reader.result as string;
+        // Switch to Firebase Storage to bypass Express 404 issues on Cloudflare/Static hosts
+        const downloadUrl = await uploadImageToFirebase(dataUrl, file.name);
+        
+        if (urlInput) urlInput.value = downloadUrl;
+        if (previewImg) previewImg.src = downloadUrl;
         if (statusEl) statusEl.textContent = '✓ Uploaded: ' + file.name;
       } catch (err: any) {
         if (statusEl) statusEl.textContent = '❌ Upload failed: ' + err.message;
@@ -94,12 +80,11 @@ if (editImageFileInput) {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const dataUrl = reader.result;
-        const res = await api('/api/admin/upload-image', {
-          method: 'POST',
-          body: JSON.stringify({ dataUrl, filename: file.name })
-        });
-        if (urlInput) urlInput.value = res.url;
+        const dataUrl = reader.result as string;
+        // Switch to Firebase Storage to bypass Express 404 issues on Cloudflare/Static hosts
+        const downloadUrl = await uploadImageToFirebase(dataUrl, file.name);
+        
+        if (urlInput) urlInput.value = downloadUrl;
       } catch (err: any) {
         alert('Upload failed: ' + err.message);
       }

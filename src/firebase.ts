@@ -13,6 +13,12 @@ import {
   where,
   orderBy
 } from 'firebase/firestore';
+import {
+  getStorage,
+  ref,
+  uploadString,
+  getDownloadURL
+} from 'firebase/storage';
 
 import config from '../firebase-applet-config.json';
 
@@ -29,6 +35,8 @@ console.log('ZENVEX Firebase Module Loaded [Production Cloud Sync]');
 export const db = config.firestoreDatabaseId && config.firestoreDatabaseId !== '(default)'
   ? getFirestore(app, config.firestoreDatabaseId)
   : getFirestore(app);
+
+export const storage = getStorage(app);
 
 // Seed Initial Default Projects into Firestore if Empty
 const DEFAULT_PROJECTS = [
@@ -363,4 +371,17 @@ export async function addMessage(data: any) {
     created_at: new Date().toISOString()
   };
   await addDoc(msgCol, newDoc);
+}
+
+// ---------------- STORAGE / UPLOADS ----------------
+export async function uploadImageToFirebase(dataUrl: string, filename: string): Promise<string> {
+  console.log('Uploading image to Firebase Storage...');
+  const sanitizedName = String(filename || 'image').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+  const storageRef = ref(storage, `portfolio/${Date.now()}_${sanitizedName}`);
+  
+  // uploadString handles data_url format automatically
+  await uploadString(storageRef, dataUrl, 'data_url');
+  const downloadUrl = await getDownloadURL(storageRef);
+  console.log('Image uploaded successfully:', downloadUrl);
+  return downloadUrl;
 }
