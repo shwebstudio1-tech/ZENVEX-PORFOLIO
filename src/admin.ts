@@ -24,6 +24,39 @@ function esc(s: any): string {
 
 let currentProjectsList: any[] = [];
 
+// Utility to compress images before saving to Firestore
+async function compressImage(dataUrl: string, maxWidth = 800, quality = 0.6): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error('Failed to load image for compression'));
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = Math.round((maxWidth / width) * height);
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(dataUrl); // Fallback to original
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        // Using jpeg for better compression ratio
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      } catch (err) {
+        resolve(dataUrl); // Fallback to original
+      }
+    };
+    img.src = dataUrl;
+  });
+}
+
 
 // Tab Navigation
 document.querySelectorAll('.admin-tab').forEach(tabBtn => {
@@ -59,15 +92,16 @@ if (imageFileInput) {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const dataUrl = reader.result as string;
-        // Switch to Firebase Storage to bypass Express 404 issues on Cloudflare/Static hosts
-        const downloadUrl = await uploadImageToFirebase(dataUrl, file.name);
+        const rawDataUrl = reader.result as string;
+        if (statusEl) statusEl.textContent = 'Processing image...';
         
-        if (urlInput) urlInput.value = downloadUrl;
-        if (previewImg) previewImg.src = downloadUrl;
-        if (statusEl) statusEl.textContent = '✓ Uploaded: ' + file.name;
+        const compressedDataUrl = await compressImage(rawDataUrl);
+        
+        if (urlInput) urlInput.value = compressedDataUrl;
+        if (previewImg) previewImg.src = compressedDataUrl;
+        if (statusEl) statusEl.textContent = '✓ Image ready';
       } catch (err: any) {
-        if (statusEl) statusEl.textContent = '❌ Upload failed: ' + err.message;
+        if (statusEl) statusEl.textContent = '❌ Error: ' + err.message;
       } finally {
         const submitBtn = document.querySelector('#addProjectForm button[type="submit"]') as HTMLButtonElement | null;
         if (submitBtn) submitBtn.disabled = false;
@@ -96,16 +130,17 @@ if (editImageFileInput) {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const dataUrl = reader.result as string;
-        // Switch to Firebase Storage to bypass Express 404 issues on Cloudflare/Static hosts
-        const downloadUrl = await uploadImageToFirebase(dataUrl, file.name);
+        const rawDataUrl = reader.result as string;
+        if (statusEl) statusEl.textContent = 'Processing...';
         
-        if (urlInput) urlInput.value = downloadUrl;
-        if (previewImg) previewImg.src = downloadUrl;
-        if (statusEl) statusEl.textContent = '✓ Uploaded';
+        const compressedDataUrl = await compressImage(rawDataUrl);
+        
+        if (urlInput) urlInput.value = compressedDataUrl;
+        if (previewImg) previewImg.src = compressedDataUrl;
+        if (statusEl) statusEl.textContent = '✓ Ready';
       } catch (err: any) {
         if (statusEl) statusEl.textContent = '❌ Failed';
-        alert('Upload failed: ' + err.message);
+        alert('Image processing failed: ' + err.message);
       } finally {
         const submitBtn = document.querySelector('#editProjectForm button[type="submit"]') as HTMLButtonElement | null;
         if (submitBtn) submitBtn.disabled = false;
