@@ -336,6 +336,10 @@
             <input type="file" id="editImageFileInput" accept="image/*" style="display:none;">
             <button type="button" class="btn btn-light" onclick="document.getElementById('editImageFileInput').click()" style="white-space:nowrap;padding:8px 12px;font-size:11px;">📁 Upload</button>
           </div>
+          <div id="editUploadPreview" style="margin-top:8px;display:none;align-items:center;gap:10px;">
+            <img id="editPreviewImg" src="" style="width:45px;height:45px;object-fit:cover;border-radius:6px;border:1px solid #dce2e7;">
+            <span id="editUploadStatusText" style="font-size:11px;color:#1e7e34;font-weight:600;"></span>
+          </div>
         </label>
       </div>
       <label>Project Description

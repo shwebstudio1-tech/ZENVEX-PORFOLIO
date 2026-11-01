@@ -215,6 +215,7 @@ export async function addProject(data: any) {
     is_active: true,
     created_at: new Date().toISOString()
   };
+  console.log('Adding project to Firestore:', newDoc);
   const docRef = await addDoc(projCol, newDoc);
   return { id: docRef.id, ...newDoc };
 }
@@ -229,6 +230,7 @@ export async function updateProject(id: string, data: any) {
   if (data.image_url !== undefined) updateData.image_url = String(data.image_url);
   if (data.link_url !== undefined) updateData.link_url = String(data.link_url);
   if (data.description !== undefined) updateData.description = String(data.description);
+  console.log('Updating project in Firestore:', id, updateData);
   await updateDoc(docRef, updateData);
 }
 

@@ -53,6 +53,9 @@ if (imageFileInput) {
     if (previewDiv) previewDiv.style.display = 'flex';
     if (statusEl) statusEl.textContent = 'Uploading image...';
 
+    const submitBtn = document.querySelector('#addProjectForm button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) submitBtn.disabled = true;
+
     const reader = new FileReader();
     reader.onload = async () => {
       try {
@@ -65,6 +68,9 @@ if (imageFileInput) {
         if (statusEl) statusEl.textContent = '✓ Uploaded: ' + file.name;
       } catch (err: any) {
         if (statusEl) statusEl.textContent = '❌ Upload failed: ' + err.message;
+      } finally {
+        const submitBtn = document.querySelector('#addProjectForm button[type="submit"]') as HTMLButtonElement | null;
+        if (submitBtn) submitBtn.disabled = false;
       }
     };
     reader.readAsDataURL(file);
@@ -77,6 +83,16 @@ if (editImageFileInput) {
     const file = e.target.files[0];
     if (!file) return;
     const urlInput = document.getElementById('editProjectImageUrl') as HTMLInputElement | null;
+    const statusEl = document.getElementById('editUploadStatusText');
+    const previewDiv = document.getElementById('editUploadPreview');
+    const previewImg = document.getElementById('editPreviewImg') as HTMLImageElement | null;
+
+    if (previewDiv) previewDiv.style.display = 'flex';
+    if (statusEl) statusEl.textContent = 'Uploading...';
+
+    const submitBtn = document.querySelector('#editProjectForm button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) submitBtn.disabled = true;
+
     const reader = new FileReader();
     reader.onload = async () => {
       try {
@@ -85,8 +101,14 @@ if (editImageFileInput) {
         const downloadUrl = await uploadImageToFirebase(dataUrl, file.name);
         
         if (urlInput) urlInput.value = downloadUrl;
+        if (previewImg) previewImg.src = downloadUrl;
+        if (statusEl) statusEl.textContent = '✓ Uploaded';
       } catch (err: any) {
+        if (statusEl) statusEl.textContent = '❌ Failed';
         alert('Upload failed: ' + err.message);
+      } finally {
+        const submitBtn = document.querySelector('#editProjectForm button[type="submit"]') as HTMLButtonElement | null;
+        if (submitBtn) submitBtn.disabled = false;
       }
     };
     reader.readAsDataURL(file);
@@ -308,6 +330,21 @@ function openEditProjectModal(id: string) {
   (document.getElementById('editProjectVisualTheme') as HTMLSelectElement).value = p.visual_theme || 'project-tech';
   (document.getElementById('editProjectLinkUrl') as HTMLInputElement).value = p.link_url || '#contact';
   (document.getElementById('editProjectImageUrl') as HTMLInputElement).value = p.image_url || '';
+  
+  const previewDiv = document.getElementById('editUploadPreview');
+  const previewImg = document.getElementById('editPreviewImg') as HTMLImageElement | null;
+  const statusEl = document.getElementById('editUploadStatusText');
+
+  if (p.image_url) {
+    if (previewDiv) previewDiv.style.display = 'flex';
+    if (previewImg) previewImg.src = p.image_url;
+    if (statusEl) statusEl.textContent = 'Existing Image';
+  } else {
+    if (previewDiv) previewDiv.style.display = 'none';
+    if (previewImg) previewImg.src = '';
+    if (statusEl) statusEl.textContent = '';
+  }
+
   (document.getElementById('editProjectDescription') as HTMLTextAreaElement).value = p.description || '';
   
   const status = document.getElementById('editProjectStatus');
