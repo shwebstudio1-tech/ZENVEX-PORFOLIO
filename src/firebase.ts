@@ -375,6 +375,11 @@ export async function addMessage(data: any) {
   await addDoc(msgCol, newDoc);
 }
 
+export async function deleteMessage(id: string) {
+  const docRef = doc(db, 'messages', String(id));
+  await deleteDoc(docRef);
+}
+
 // ---------------- STORAGE / UPLOADS ----------------
 export async function uploadImageToFirebase(dataUrl: string, filename: string): Promise<string> {
   console.log('Uploading image to Firebase Storage...');

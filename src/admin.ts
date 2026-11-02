@@ -13,6 +13,7 @@ import {
   fetchReviews,
   reviewAction,
   fetchMessages,
+  deleteMessage,
   uploadImageToFirebase
 } from './firebase';
 
@@ -338,8 +339,21 @@ async function loadAll() {
               <p style="background:#fff;padding:12px;border:1px solid #e1e6eb;border-radius:8px;">${esc(m.details)}</p>
               <small style="color:var(--muted)">Received: ${esc(m.created_at)}</small>
             </div>
+            <div class="admin-actions">
+              <button class="danger" data-delete-msg-id="${m.id}">Delete</button>
+            </div>
           </div>
         `).join('');
+
+        msgEl.querySelectorAll('[data-delete-msg-id]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-delete-msg-id');
+            if (id && confirm('Are you sure you want to delete this inquiry?')) {
+              await deleteMessage(id);
+              await loadAll();
+            }
+          });
+        });
       }
     }
 
