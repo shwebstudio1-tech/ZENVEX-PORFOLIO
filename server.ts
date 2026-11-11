@@ -66,7 +66,7 @@ app.post('/api/admin/upload-image', checkAdmin, (req, res) => {
 
 // SEO & SEARCH CONSOLE ROUTES
 app.get('/robots.txt', (req, res) => {
-  const host = req.headers.host || 'zenvex.app';
+  const host = req.headers.host || 'portfolio.zenvexdev.workers.dev';
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const baseUrl = `${protocol}://${host}`;
   
@@ -81,7 +81,7 @@ Sitemap: ${baseUrl}/sitemap.xml
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  const host = req.headers.host || 'zenvex.app';
+  const host = req.headers.host || 'portfolio.zenvexdev.workers.dev';
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const baseUrl = `${protocol}://${host}`;
   const now = new Date().toISOString().split('T')[0];
