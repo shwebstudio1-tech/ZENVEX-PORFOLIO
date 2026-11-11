@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /admin
 
-Sitemap: https://zenvex.app/sitemap.xml
+Sitemap: https://portfolio.zenvexdev.workers.dev/sitemap.xml
